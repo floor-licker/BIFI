@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import "../../oracle/oracle.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 contract EtherOracle is observerOracle {
     constructor(int256 _price)
