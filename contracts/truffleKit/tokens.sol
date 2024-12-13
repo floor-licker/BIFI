@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import "../tokenStandard/openzeppelinERC20.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 // BiFi project
 contract Bifi is openzeppelinERC20 {
