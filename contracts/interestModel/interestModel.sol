@@ -256,8 +256,8 @@ contract interestModel is interestModelInterface, InterestErrors {
 			BIR = minRate + _baseBIR + _jumpBIR;
       */
       BIR = minRate
-       +  _jmpPoint.unifiedMul(basicSensitivity )
-       +  utilRate - _jmpPoint.unifiedMul(jumpSensitivity );
+       +  _jmpPoint.unifiedMul(basicSensitivity)
+       +  utilRate - _jmpPoint.unifiedMul(jumpSensitivity);
 		}
 
 		/* SIR = UtilRate * BIR */
