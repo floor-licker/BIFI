@@ -2,7 +2,7 @@
 
 import "../../marketHandler/coinHandler.sol";
 import "../../marketHandler/tokenHandler.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 contract CoinHandlerLogic is coinHandler {
     constructor()
