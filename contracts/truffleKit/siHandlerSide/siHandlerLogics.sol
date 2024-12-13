@@ -2,7 +2,7 @@
 
 import "../../marketHandler/tokenSI.sol";
 import "../../marketHandler/coinSI.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 contract CoinSI is coinSI {
   constructor()
