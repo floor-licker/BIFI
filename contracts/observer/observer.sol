@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 import "../interfaces/oracleInterface.sol";
-import "../SafeMath.sol";
 
 /**
  * @title Bifi's observer contract
@@ -11,7 +10,6 @@ import "../SafeMath.sol";
  * @author BiFi(seinmyung25, Miller-kk, tlatkdgus1, dongchangYoo)
  */
 contract Observer {
-	using SafeMath for uint256;
 
 	address payable public owner;
 	mapping(address => bool) operators;
@@ -66,7 +64,7 @@ contract Observer {
 			.unifiedMul( chain.alphaRate )
 			.add(
 				SafeMath.unifiedPoint
-				.sub( chain.alphaRate )
+				 -  chain.alphaRate 
 				.unifiedMul( chain.chainBorrow )
 			)
 			.unifiedMul( uint256( oracleInterface(chain.priceOracleAddr).latestAnswer() ) )
