@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 import "../interfaces/marketManagerInterface.sol";
 
@@ -11,7 +11,6 @@ import "../interfaces/liquidationManagerInterface.sol";
 import "../interfaces/proxyContractInterface.sol";
 import "../interfaces/tokenInterface.sol";
 import "../Errors.sol";
-import "../SafeMath.sol";
 
 import "../interfaces/observerInterface.sol";
 
@@ -24,7 +23,6 @@ import "../interfaces/SIInterface.sol";
  * @author BiFi(seinmyung25, Miller-kk, tlatkdgus1, dongchangYoo)
  */
 contract etherManager is marketManagerInterface, ManagerErrors {
-	using SafeMath for uint256;
 
 	address public owner;
 	mapping(address => bool) operators;
@@ -397,16 +395,16 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 					if (userAssetsInfo.depositAmount > 0)
 					{
 						userAssetsInfo.depositAsset = userAssetsInfo.depositAmount.unifiedMul(userAssetsInfo.price);
-						userAssetsInfo.depositAssetBorrowLimitSum = userAssetsInfo.depositAssetBorrowLimitSum.add(userAssetsInfo.depositAsset.unifiedMul(userAssetsInfo.borrowLimit));
-						userAssetsInfo.marginCallLimitSum = userAssetsInfo.marginCallLimitSum.add(userAssetsInfo.depositAsset.unifiedMul(userAssetsInfo.marginCallLimit));
-						userAssetsInfo.depositAssetSum = userAssetsInfo.depositAssetSum.add(userAssetsInfo.depositAsset);
+						userAssetsInfo.depositAssetBorrowLimitSum = userAssetsInfo.depositAssetBorrowLimitSum + userAssetsInfo.depositAsset.unifiedMul(userAssetsInfo.borrowLimit);
+						userAssetsInfo.marginCallLimitSum = userAssetsInfo.marginCallLimitSum + userAssetsInfo.depositAsset.unifiedMul(userAssetsInfo.marginCallLimit);
+						userAssetsInfo.depositAssetSum = userAssetsInfo.depositAssetSum + userAssetsInfo.depositAsset;
 					}
 
 					/* Compute the borrow parameters */
 					if (userAssetsInfo.borrowAmount > 0)
 					{
 						userAssetsInfo.borrowAsset = userAssetsInfo.borrowAmount.unifiedMul(userAssetsInfo.price);
-						userAssetsInfo.borrowAssetSum = userAssetsInfo.borrowAssetSum.add(userAssetsInfo.borrowAsset);
+						userAssetsInfo.borrowAssetSum = userAssetsInfo.borrowAssetSum + userAssetsInfo.borrowAsset;
 					}
 
 				}
@@ -418,10 +416,10 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		if (userAssetsInfo.depositAssetBorrowLimitSum > userAssetsInfo.borrowAssetSum)
 		{
 			/* Set the amount that the user can borrow from the borrow limit and previous borrows. */
-			userAssetsInfo.userBorrowableAsset = userAssetsInfo.depositAssetBorrowLimitSum.sub(userAssetsInfo.borrowAssetSum);
+			userAssetsInfo.userBorrowableAsset = userAssetsInfo.depositAssetBorrowLimitSum - userAssetsInfo.borrowAssetSum;
 
 			/* Set the allowed amount that the user can withdraw based on the user borrow */
-			userAssetsInfo.withdrawableAsset = userAssetsInfo.depositAssetBorrowLimitSum.sub(userAssetsInfo.borrowAssetSum).unifiedDiv(userAssetsInfo.callerBorrowLimit);
+			userAssetsInfo.withdrawableAsset = userAssetsInfo.depositAssetBorrowLimitSum - userAssetsInfo.borrowAssetSum.unifiedDiv(userAssetsInfo.callerBorrowLimit);
 		}
 
 		/* Return the calculated parameters */
@@ -456,7 +454,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		}
 
 		/* transfer reward tokens */
-		return _rewardTransfer(msg.sender, delta.mul(dataStorageInstance.getInterestUpdateRewardPerblock()));
+		return _rewardTransfer(msg.sender, delta * dataStorageInstance.getInterestUpdateRewardPerblock());
 	}
 
 	/**
@@ -485,7 +483,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		uint256 claimAmountSum;
 		for (handlerID; handlerID < tokenHandlerLength; handlerID++)
 		{
-			claimAmountSum = claimAmountSum.add(_claimHandlerRewardAmount(handlerID, userAddr));
+			claimAmountSum = claimAmountSum + _claimHandlerRewardAmount(handlerID, userAddr);
 		}
 		require(_rewardTransfer(userAddr, claimAmountSum));
 		return claimAmountSum;
@@ -546,7 +544,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		if(address(_rewardERC20) != address(0x0)) {
 			uint256 beforeBalance = _rewardERC20.balanceOf(userAddr);
 			_rewardERC20.transfer(userAddr, _amount);
-			require(_amount == _rewardERC20.balanceOf(userAddr).sub(beforeBalance), REWARD_TRANSFER);
+			require(_amount == _rewardERC20.balanceOf(userAddr) - beforeBalance, REWARD_TRANSFER);
 			return true;
 		}
 	}
@@ -579,25 +577,25 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		/* Remaining periods for reward distribution */
 		uint256 remainingPeriod = globalRewardPerBlock.unifiedDiv(globalRewardDecrement);
 
-		if (remainingPeriod >= delta.mul(SafeMath.unifiedPoint))
+		if (remainingPeriod >= delta * SafeMath.unifiedPoint)
 		{
-			remainingPeriod = remainingPeriod.sub(delta.mul(SafeMath.unifiedPoint));
+			remainingPeriod = remainingPeriod - delta * SafeMath.unifiedPoint;
 		}
 		else
 		{
 			return _epilogueOfDetermineRewardParams(_dataStorage, userAddr, delta, 0, globalRewardDecrement, 0);
 		}
 
-		if (globalRewardTotalAmount >= globalRewardPerBlock.mul(delta))
+		if (globalRewardTotalAmount >= globalRewardPerBlock * delta)
 		{
-			globalRewardTotalAmount = globalRewardTotalAmount - globalRewardPerBlock.mul(delta);
+			globalRewardTotalAmount = globalRewardTotalAmount - globalRewardPerBlock * delta;
 		}
 		else
 		{
 			return _epilogueOfDetermineRewardParams(_dataStorage, userAddr, delta, 0, globalRewardDecrement, 0);
 		}
 
-		globalRewardPerBlock = globalRewardTotalAmount.mul(2).unifiedDiv(remainingPeriod.add(SafeMath.unifiedPoint));
+		globalRewardPerBlock = globalRewardTotalAmount * 2.unifiedDiv(remainingPeriod + SafeMath.unifiedPoint);
 		/* To incentivze the update operation, the operator get paid with the
 		reward token */
 		return _epilogueOfDetermineRewardParams(_dataStorage, userAddr, delta, globalRewardPerBlock, globalRewardDecrement, globalRewardTotalAmount);
@@ -626,7 +624,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		_dataStorage.setGlobalRewardDecrement(_globalRewardDecrement);
 		_dataStorage.setGlobalRewardTotalAmount(_globalRewardTotalAmount);
 
-		uint256 rewardAmount = _delta.mul(_dataStorage.getRewardParamUpdateRewardPerBlock());
+		uint256 rewardAmount = _delta * _dataStorage.getRewardParamUpdateRewardPerBlock();
 		/* To incentivze the update operation, the operator get paid with the
 		reward token */
 		_rewardTransfer(userAddr, rewardAmount);
@@ -649,13 +647,13 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		for (handlerID; handlerID < handlerLength; handlerID++)
 		{
 			handlerAlphaRateBaseAsset[handlerID] = _getAlphaBaseAsset(handlerID);
-			alphaRateBaseGlobalAssetSum = alphaRateBaseGlobalAssetSum.add(handlerAlphaRateBaseAsset[handlerID]);
+			alphaRateBaseGlobalAssetSum = alphaRateBaseGlobalAssetSum + handlerAlphaRateBaseAsset[handlerID];
 		}
 
 		chainAlphaRateBaseAsset = observer.getAlphaBaseAsset();
 		handlerID = 0;
 		for (;handlerID < chainAlphaRateBaseAsset.length; handlerID++) {
-			alphaRateBaseGlobalAssetSum = alphaRateBaseGlobalAssetSum.add(chainAlphaRateBaseAsset[handlerID]);
+			alphaRateBaseGlobalAssetSum = alphaRateBaseGlobalAssetSum + chainAlphaRateBaseAsset[handlerID];
 		}
 
 		handlerID = 0;
@@ -747,7 +745,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 	*/
 	function _calcAlphaBaseAmount(uint256 _alpha, uint256 _depositAmount, uint256 _borrowAmount) internal pure returns (uint256)
 	{
-		return _depositAmount.unifiedMul(_alpha).add(_borrowAmount.unifiedMul(SafeMath.unifiedPoint.sub(_alpha)));
+		return _depositAmount.unifiedMul(_alpha) + _borrowAmount.unifiedMul(SafeMath.unifiedPoint - _alpha);
 	}
 
 	/**
@@ -875,7 +873,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 
 		if (depositCredit > borrowCredit)
 		{
-			return depositCredit.sub(borrowCredit).unifiedDiv(_getTokenHandlerPrice(handlerID));
+			return depositCredit - borrowCredit.unifiedDiv(_getTokenHandlerPrice(handlerID));
 		}
 		else
 		{
@@ -929,8 +927,8 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 				uint256 marginCallLimit = _getTokenHandlerMarginCallLimit(handlerID);
 				uint256 userBorrowLimitAsset = depositHandlerAsset.unifiedMul(borrowLimit);
 				uint256 userMarginCallLimitAsset = depositHandlerAsset.unifiedMul(marginCallLimit);
-				userTotalBorrowLimitAsset = userTotalBorrowLimitAsset.add(userBorrowLimitAsset);
-				userTotalMarginCallLimitAsset = userTotalMarginCallLimitAsset.add(userMarginCallLimitAsset);
+				userTotalBorrowLimitAsset = userTotalBorrowLimitAsset + userBorrowLimitAsset;
+				userTotalMarginCallLimitAsset = userTotalMarginCallLimitAsset + userMarginCallLimitAsset;
 			}
 			else
 			{
@@ -962,7 +960,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 			{
 
 				(depositHandlerAsset, borrowHandlerAsset) = _getUserIntraHandlerAssetWithInterest(userAddr, handlerID);
-				userTotalBorrowAsset = userTotalBorrowAsset.add(borrowHandlerAsset);
+				userTotalBorrowAsset = userTotalBorrowAsset + borrowHandlerAsset;
 				depositAssetBorrowLimitSum = depositAssetBorrowLimitSum
 												.add(
 													depositHandlerAsset
@@ -974,7 +972,7 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 		if (depositAssetBorrowLimitSum > userTotalBorrowAsset)
 		{
 			return depositAssetBorrowLimitSum
-					.sub(userTotalBorrowAsset)
+					 - userTotalBorrowAsset
 					.unifiedDiv( _getTokenHandlerBorrowLimit(callerID) )
 					.unifiedDiv( _getTokenHandlerPrice(callerID) );
 		}
@@ -1153,8 +1151,8 @@ contract etherManager is marketManagerInterface, ManagerErrors {
 				(depositHandlerAsset, borrowHandlerAsset) = _getUserIntraHandlerAssetWithInterest(userAddr, handlerID);
 				uint256 borrowLimit = _getTokenHandlerBorrowLimit(handlerID);
 				uint256 depositHandlerCredit = depositHandlerAsset.unifiedMul(borrowLimit);
-				depositTotalCredit = depositTotalCredit.add(depositHandlerCredit);
-				borrowTotalCredit = borrowTotalCredit.add(borrowHandlerAsset);
+				depositTotalCredit = depositTotalCredit + depositHandlerCredit;
+				borrowTotalCredit = borrowTotalCredit + borrowHandlerAsset;
 			}
 			else
 			{
