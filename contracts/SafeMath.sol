@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-pragma solidity ^0.6.12;
+pragma solidity ^0.8.0;
 
 // from: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/math/SafeMath.sol
 // Subject to the MIT license.
