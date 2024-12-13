@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import "../../oracle/oracleProxy.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 contract OracleProxy is oracleProxy {
     constructor (address coinOracle, address usdtOracle, address daiOracle, address linkOracle, address usdcOracle)
