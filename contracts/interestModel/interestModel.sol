@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 import "../interfaces/interestModelInterface.sol";
 import "../interfaces/marketHandlerDataStorageInterface.sol";
-import "../SafeMath.sol";
 import "../Errors.sol";
 
  /**
@@ -13,7 +12,6 @@ import "../Errors.sol";
   * @author BiFi(seinmyung25, Miller-kk, tlatkdgus1, dongchangYoo)
   */
 contract interestModel is interestModelInterface, InterestErrors {
-	using SafeMath for uint256;
 
 	address owner;
 	mapping(address => bool) public operators;
@@ -182,7 +180,7 @@ contract interestModel is interestModelInterface, InterestErrors {
 	function _viewInterestAmount(address handlerDataStorageAddr, address payable userAddr) internal view returns (bool, uint256, uint256, bool, uint256, uint256)
 	{
 		marketHandlerDataStorageInterface handlerDataStorage = marketHandlerDataStorageInterface(handlerDataStorageAddr);
-		uint256 blockDelta = block.number.sub(handlerDataStorage.getLastUpdatedBlock());
+		uint256 blockDelta = block.number - handlerDataStorage.getLastUpdatedBlock();
 		/* check action in block */
 		uint256 globalDepositEXR;
 		uint256 globalBorrowEXR;
@@ -248,18 +246,18 @@ contract interestModel is interestModelInterface, InterestErrors {
 		uint256 _jmpPoint = jumpPoint;
 		/* BIR = minimumRate + (UtilRate * liquiditySensitivity) */
 		if(utilRate < _jmpPoint) {
-			BIR = utilRate.unifiedMul(basicSensitivity).add(minRate);
+			BIR = utilRate.unifiedMul(basicSensitivity) + minRate;
 		} else {
       /*
       Formula : BIR = minRate + jumpPoint * basicSensitivity + (utilRate - jumpPoint) * jumpSensitivity
 
 			uint256 _baseBIR = _jmpPoint.unifiedMul(basicSensitivity);
-			uint256 _jumpBIR = utilRate.sub(_jmpPoint).unifiedMul(jumpSensitivity);
-			BIR = minRate.add(_baseBIR).add(_jumpBIR);
+			uint256 _jumpBIR = utilRate - _jmpPoint.unifiedMul(jumpSensitivity);
+			BIR = minRate + _baseBIR + _jumpBIR;
       */
       BIR = minRate
-      .add( _jmpPoint.unifiedMul(basicSensitivity) )
-      .add( utilRate.sub(_jmpPoint).unifiedMul(jumpSensitivity) );
+       +  _jmpPoint.unifiedMul(basicSensitivity )
+       +  utilRate - _jmpPoint.unifiedMul(jumpSensitivity );
 		}
 
 		/* SIR = UtilRate * BIR */
@@ -278,7 +276,7 @@ contract interestModel is interestModelInterface, InterestErrors {
 		uint256 SIR;
 		uint256 BIR;
 		(SIR, BIR) = _getSIRandBIR(depositTotalAmount, borrowTotalAmount);
-		return ( SIR.div(blocksPerYear), BIR.div(blocksPerYear) );
+		return ( SIR / blocksPerYear, BIR / blocksPerYear );
 	}
 
 	/**
@@ -290,7 +288,7 @@ contract interestModel is interestModelInterface, InterestErrors {
 	 */
 	function _getNewGlobalEXR(uint256 actionEXR, uint256 interestRate, uint256 delta) internal pure returns (uint256)
 	{
-		return interestRate.mul(delta).add(unifiedPoint).unifiedMul(actionEXR);
+		return interestRate * delta + unifiedPoint.unifiedMul(actionEXR);
 	}
 
 	/**
@@ -325,10 +323,10 @@ contract interestModel is interestModelInterface, InterestErrors {
 		uint256 EXR = newGlobalEXR.unifiedDiv(lastUserEXR);
 		if (EXR >= unifiedPoint)
 		{
-			return ( false, EXR.sub(unifiedPoint) );
+			return ( false, EXR - unifiedPoint );
 		}
 
-		return ( true, unifiedPoint.sub(EXR) );
+		return ( true, unifiedPoint - EXR );
 	}
 	//TODO: Need comment
 	function getMinRate() external view returns (uint256) {
