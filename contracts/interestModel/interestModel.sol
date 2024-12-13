@@ -323,10 +323,10 @@ contract interestModel is interestModelInterface, InterestErrors {
 		uint256 EXR = newGlobalEXR.unifiedDiv(lastUserEXR);
 		if (EXR >= unifiedPoint)
 		{
-			return ( false, EXR - unifiedPoint );
+			return (false, EXR - unifiedPoint);
 		}
 
-		return ( true, unifiedPoint - EXR );
+		return (true, unifiedPoint - EXR);
 	}
 	//TODO: Need comment
 	function getMinRate() external view returns (uint256) {
