@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 import "../../marketManager/tokenManager.sol";
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 
 contract Manager is etherManager {
     constructor (address managerDataStorageAddr, address oracleProxyAddr, address breaker, address erc20Addr)
